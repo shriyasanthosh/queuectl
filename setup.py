@@ -11,7 +11,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "queuectl=queuectl:main",
+            "queuectl=queuectl.cli:main",
         ],
     },
     python_requires=">=3.7",

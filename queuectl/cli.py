@@ -12,8 +12,8 @@ from .config import Config
 
 # Global instances
 storage = JobStorage()
-config = Config()
-worker_manager = WorkerManager(storage, config)
+app_config = Config()
+worker_manager = WorkerManager(storage, app_config)
 
 
 @click.group()
@@ -50,7 +50,7 @@ def enqueue(job_data):
         job = Job(
             job_id=job_dict["id"],
             command=job_dict["command"],
-            max_retries=job_dict.get("max_retries", config.get("max_retries", 3))
+            max_retries=job_dict.get("max_retries", app_config.get("max_retries", 3))
         )
         
         storage.save_job(job)
@@ -235,7 +235,7 @@ def set(key, value):
         sys.exit(1)
     
     try:
-        config.set(internal_key, value)
+        app_config.set(internal_key, value)
         click.echo(f"Configuration '{key}' set to {value}")
     except ValueError as e:
         click.echo(f"Error: {e}", err=True)
@@ -245,7 +245,7 @@ def set(key, value):
 @config.command()
 def show():
     """Show current configuration"""
-    all_config = config.get_all()
+    all_config = app_config.get_all()
     click.echo("Current Configuration:")
     click.echo("-" * 40)
     
