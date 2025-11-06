@@ -4,7 +4,7 @@ Persistent storage for jobs using JSON file
 import json
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 from .models import Job, JobState
@@ -76,7 +76,7 @@ class JobStorage:
     def get_failed_jobs(self) -> List[Job]:
         """Get all failed jobs ready for retry"""
         all_jobs = self.get_all_jobs()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         failed_jobs = []
         
         for job in all_jobs:
@@ -85,6 +85,9 @@ class JobStorage:
                 if job.next_retry_at:
                     try:
                         retry_time = datetime.fromisoformat(job.next_retry_at.replace('Z', '+00:00'))
+                        # Ensure both are timezone-aware for comparison
+                        if retry_time.tzinfo is None:
+                            retry_time = retry_time.replace(tzinfo=timezone.utc)
                         if retry_time <= now:
                             failed_jobs.append(job)
                     except (ValueError, AttributeError):

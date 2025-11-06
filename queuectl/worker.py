@@ -12,7 +12,7 @@ from .storage import JobStorage
 from .models import Job, JobState
 from .executor import JobExecutor
 from .config import Config
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class Worker:
@@ -113,8 +113,8 @@ class Worker:
                 if job.should_retry():
                     # Calculate retry delay
                     delay = job.calculate_retry_delay(backoff_base)
-                    next_retry = datetime.utcnow() + timedelta(seconds=delay)
-                    job.next_retry_at = next_retry.isoformat() + "Z"
+                    next_retry = datetime.now(timezone.utc) + timedelta(seconds=delay)
+                    job.next_retry_at = next_retry.isoformat().replace('+00:00', 'Z')
                     job.state = JobState.FAILED
                     self.storage.save_job(job)
                 else:
@@ -129,8 +129,8 @@ class Worker:
             
             if job.should_retry():
                 delay = job.calculate_retry_delay(backoff_base)
-                next_retry = datetime.utcnow() + timedelta(seconds=delay)
-                job.next_retry_at = next_retry.isoformat() + "Z"
+                next_retry = datetime.now(timezone.utc) + timedelta(seconds=delay)
+                job.next_retry_at = next_retry.isoformat().replace('+00:00', 'Z')
                 job.state = JobState.FAILED
                 self.storage.save_job(job)
             else:
