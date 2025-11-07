@@ -1,6 +1,4 @@
-"""
-Job data models and state management
-"""
+# Job data models and state management
 import json
 from datetime import datetime
 from enum import Enum
@@ -8,7 +6,6 @@ from typing import Optional, Dict, Any
 
 
 class JobState(Enum):
-    """Job state enumeration"""
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -17,7 +14,6 @@ class JobState(Enum):
 
 
 class Job:
-    """Represents a single job in the queue"""
     
     def __init__(
         self,

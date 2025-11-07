@@ -1,6 +1,4 @@
-"""
-CLI interface for QueueCTL
-"""
+# CLI interface for QueueCTL
 import json
 import sys
 import click
@@ -19,19 +17,13 @@ worker_manager = WorkerManager(storage, app_config)
 @click.group()
 @click.version_option(version="1.0.0")
 def cli():
-    """QueueCTL - CLI-based background job queue system"""
     pass
 
 
 @cli.command()
 @click.argument('job_data', type=str)
 def enqueue(job_data):
-    """Enqueue a new job to the queue
-    
-    JOB_DATA: JSON string with job details (id, command, max_retries optional)
-    
-    Example: queuectl enqueue '{"id":"job1","command":"echo hello"}'
-    """
+    # Enqueue a new job to the queue
     try:
         job_dict = json.loads(job_data)
         
@@ -73,7 +65,7 @@ def worker():
 @worker.command()
 @click.option('--count', default=1, type=int, help='Number of workers to start')
 def start(count):
-    """Start worker processes"""
+    # Start worker processes
     if count < 1:
         click.echo("Error: Worker count must be at least 1", err=True)
         sys.exit(1)
@@ -91,13 +83,13 @@ def start(count):
 
 @worker.command()
 def stop():
-    """Stop all running workers gracefully"""
+    # Stop all running workers gracefully
     worker_manager.stop_workers()
 
 
 @cli.command()
 def status():
-    """Show summary of all job states and active workers"""
+    # Show summary of all job states and active workers
     all_jobs = storage.get_all_jobs()
     
     # Count jobs by state
@@ -126,7 +118,7 @@ def status():
 @click.option('--state', type=click.Choice(['pending', 'processing', 'completed', 'failed', 'dead']), 
               help='Filter jobs by state')
 def list(state):
-    """List jobs, optionally filtered by state"""
+    # List jobs, optionally filtered by state
     if state:
         state_enum = JobState(state)
         jobs = storage.get_jobs_by_state(state_enum)
@@ -150,13 +142,13 @@ def list(state):
 
 @cli.group()
 def dlq():
-    """Manage Dead Letter Queue"""
+    # Manage Dead Letter Queue
     pass
 
 
 @dlq.command()
 def list():
-    """List all jobs in the Dead Letter Queue"""
+    # List all jobs in the Dead Letter Queue
     dead_jobs = storage.get_dead_jobs()
     
     if not dead_jobs:
@@ -178,7 +170,7 @@ def list():
 @dlq.command()
 @click.argument('job_id', type=str)
 def retry(job_id):
-    """Retry a job from the Dead Letter Queue"""
+    # Retry a job from the Dead Letter Queue
     job = storage.get_job(job_id)
     
     if not job:
@@ -202,7 +194,7 @@ def retry(job_id):
 
 @cli.group()
 def config():
-    """Manage configuration"""
+    # Manage configuration
     pass
 
 
@@ -210,10 +202,7 @@ def config():
 @click.argument('key', type=str)
 @click.argument('value', type=str)
 def set(key, value):
-    """Set a configuration value
-    
-    Keys: max-retries, backoff-base, worker-poll-interval, job-timeout
-    """
+    # Set a configuration value
     # Convert key from kebab-case to snake_case
     key_map = {
         "max-retries": "max_retries",
@@ -244,7 +233,7 @@ def set(key, value):
 
 @config.command()
 def show():
-    """Show current configuration"""
+    # Show current configuration
     all_config = app_config.get_all()
     click.echo("Current Configuration:")
     click.echo("-" * 40)
@@ -261,8 +250,24 @@ def show():
         click.echo(f"{display_key}: {value}")
 
 
+@cli.command()
+@click.option('--host', default='127.0.0.1', help='Host to bind to')
+@click.option('--port', default=5000, type=int, help='Port to bind to')
+@click.option('--debug', is_flag=True, help='Enable debug mode')
+def web(host, port, debug):
+    # Start the web dashboard
+    try:
+        from .web import run_web_server
+        click.echo(f"Starting web server on http://{host}:{port}")
+        click.echo("Press Ctrl+C to stop")
+        run_web_server(host=host, port=port, debug=debug)
+    except ImportError:
+        click.echo("Error: Flask is not installed. Run: pip install flask flask-cors", err=True)
+        sys.exit(1)
+
+
 def main():
-    """Entry point for CLI"""
+    # Entry point for CLI
     cli()
 
 

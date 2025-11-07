@@ -1,6 +1,4 @@
-"""
-Persistent storage for jobs using JSON file
-"""
+# Persistent storage for jobs using JSON file
 import json
 import os
 import threading
@@ -11,7 +9,6 @@ from .models import Job, JobState
 
 
 class JobStorage:
-    """Thread-safe persistent storage for jobs"""
     
     def __init__(self, storage_path: str = "jobs.json"):
         self.storage_path = Path(storage_path)

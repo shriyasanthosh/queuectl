@@ -1,6 +1,4 @@
-"""
-Job execution logic
-"""
+# Job execution logic
 import subprocess
 import time
 from typing import Tuple, Optional
@@ -9,7 +7,6 @@ from .config import Config
 
 
 class JobExecutor:
-    """Executes jobs and handles timeouts"""
     
     def __init__(self, config: Config):
         self.config = config

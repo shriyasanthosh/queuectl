@@ -1,6 +1,4 @@
-"""
-Configuration management
-"""
+# Configuration management
 import json
 import os
 from pathlib import Path
@@ -8,7 +6,6 @@ from typing import Any, Optional
 
 
 class Config:
-    """Configuration manager with persistent storage"""
     
     def __init__(self, config_path: str = "config.json"):
         self.config_path = Path(config_path)

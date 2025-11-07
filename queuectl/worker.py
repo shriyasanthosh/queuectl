@@ -1,6 +1,4 @@
-"""
-Worker process management
-"""
+# Worker process management
 import os
 import signal
 import sys
@@ -16,7 +14,6 @@ from datetime import datetime, timedelta, timezone
 
 
 class Worker:
-    """Worker process that processes jobs from the queue"""
     
     def __init__(self, worker_id: int, storage: JobStorage, config: Config):
         self.worker_id = worker_id

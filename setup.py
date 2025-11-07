@@ -4,10 +4,11 @@ setup(
     name="queuectl",
     version="1.0.0",
     description="CLI-based background job queue system",
-    author="Your Name",
     py_modules=["queuectl"],
     install_requires=[
         "click>=8.1.0",
+        "flask>=2.3.0",
+        "flask-cors>=4.0.0",
     ],
     entry_points={
         "console_scripts": [
