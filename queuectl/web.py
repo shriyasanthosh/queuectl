@@ -1,4 +1,3 @@
-# Web frontend for QueueCTL using Flask
 import os
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request
@@ -8,7 +7,6 @@ from .models import Job, JobState
 from .worker import WorkerManager
 from .config import Config
 
-# Get the directory where this module is located
 module_dir = Path(__file__).parent
 template_dir = module_dir / 'templates'
 static_dir = module_dir / 'static'
@@ -18,7 +16,6 @@ app = Flask(__name__,
             static_folder=str(static_dir))
 CORS(app)
 
-# Global instances
 storage = JobStorage()
 app_config = Config()
 worker_manager = WorkerManager(storage, app_config)
@@ -68,7 +65,6 @@ def get_jobs():
     else:
         jobs = storage.get_all_jobs()
     
-    # Sort by created_at
     jobs.sort(key=lambda j: j.created_at)
     
     return jsonify([job.to_dict() for job in jobs])
@@ -81,16 +77,16 @@ def enqueue_job():
     if not data or 'id' not in data or 'command' not in data:
         return jsonify({"error": "Job must have 'id' and 'command' fields"}), 400
     
-    # Check if job already exists
     existing_job = storage.get_job(data['id'])
     if existing_job:
         return jsonify({"error": f"Job with id '{data['id']}' already exists"}), 400
     
-    # Create job
     job = Job(
         job_id=data['id'],
         command=data['command'],
-        max_retries=data.get('max_retries', app_config.get('max_retries', 3))
+        max_retries=data.get('max_retries', app_config.get('max_retries', 3)),
+        priority=data.get('priority', 5),
+        run_at=data.get('run_at')
     )
     
     storage.save_job(job)
@@ -105,6 +101,25 @@ def get_job(job_id):
     return jsonify(job.to_dict())
 
 
+@app.route('/api/jobs/<job_id>/output')
+def get_job_output(job_id):
+    job = storage.get_job(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    
+    output_type = request.args.get('type', 'all')
+    
+    if output_type == 'stdout':
+        return jsonify({"stdout": job.stdout or ""})
+    elif output_type == 'stderr':
+        return jsonify({"stderr": job.stderr or ""})
+    else:
+        return jsonify({
+            "stdout": job.stdout or "",
+            "stderr": job.stderr or ""
+        })
+
+
 @app.route('/api/jobs/<job_id>/retry', methods=['POST'])
 def retry_job(job_id):
     job = storage.get_job(job_id)
@@ -115,7 +130,6 @@ def retry_job(job_id):
     if job.state != JobState.DEAD:
         return jsonify({"error": "Job is not in Dead Letter Queue"}), 400
     
-    # Reset job to pending state
     job.state = JobState.PENDING
     job.attempts = 0
     job.error_message = None
@@ -148,7 +162,6 @@ def set_config():
     key = data['key']
     value = data['value']
     
-    # Convert key from kebab-case to snake_case
     key_map = {
         "max-retries": "max_retries",
         "backoff-base": "backoff_base",
@@ -158,7 +171,6 @@ def set_config():
     
     internal_key = key_map.get(key, key)
     
-    # Convert value to appropriate type
     try:
         if internal_key in ["max_retries", "job_timeout"]:
             value = int(value)
@@ -213,6 +225,53 @@ def get_workers_status():
     })
 
 
+@app.route('/api/metrics')
+def get_metrics():
+    all_jobs = storage.get_all_jobs()
+    
+    completed_jobs = [j for j in all_jobs if j.state == JobState.COMPLETED]
+    failed_jobs = [j for j in all_jobs if j.state == JobState.FAILED]
+    dead_jobs = [j for j in all_jobs if j.state == JobState.DEAD]
+    
+    total_jobs = len(all_jobs)
+    total_completed = len(completed_jobs)
+    total_failed = len(failed_jobs)
+    total_dead = len(dead_jobs)
+    
+    processed_jobs = total_completed + total_failed + total_dead
+    success_rate = (total_completed / processed_jobs * 100) if processed_jobs > 0 else 0
+    
+    jobs_with_time = [j for j in completed_jobs if j.execution_time is not None]
+    avg_execution_time = sum(j.execution_time for j in jobs_with_time) / len(jobs_with_time) if jobs_with_time else 0
+    
+    total_execution_time = sum(j.execution_time for j in jobs_with_time if j.execution_time)
+    
+    fastest_job = min(jobs_with_time, key=lambda j: j.execution_time) if jobs_with_time else None
+    slowest_job = max(jobs_with_time, key=lambda j: j.execution_time) if jobs_with_time else None
+    
+    metrics = {
+        "total_jobs": total_jobs,
+        "completed": total_completed,
+        "failed": total_failed,
+        "dead": total_dead,
+        "success_rate": round(success_rate, 2),
+        "execution_time": {
+            "average": round(avg_execution_time, 3),
+            "total": round(total_execution_time, 3),
+            "fastest": {
+                "job_id": fastest_job.id if fastest_job else None,
+                "time": round(fastest_job.execution_time, 3) if fastest_job else None
+            },
+            "slowest": {
+                "job_id": slowest_job.id if slowest_job else None,
+                "time": round(slowest_job.execution_time, 3) if slowest_job else None
+            }
+        }
+    }
+    
+    return jsonify(metrics)
+
+
 @app.route('/api/jobs/<job_id>', methods=['DELETE'])
 def delete_job(job_id):
     job = storage.get_job(job_id)
@@ -228,4 +287,3 @@ def delete_job(job_id):
 
 def run_web_server(host='127.0.0.1', port=5000, debug=False):
     app.run(host=host, port=port, debug=debug)
-

@@ -1,4 +1,3 @@
-# CLI interface for QueueCTL
 import json
 import sys
 import click
@@ -7,8 +6,6 @@ from .models import Job, JobState
 from .worker import WorkerManager
 from .config import Config
 
-
-# Global instances
 storage = JobStorage()
 app_config = Config()
 worker_manager = WorkerManager(storage, app_config)
@@ -23,26 +20,24 @@ def cli():
 @cli.command()
 @click.argument('job_data', type=str)
 def enqueue(job_data):
-    # Enqueue a new job to the queue
     try:
         job_dict = json.loads(job_data)
         
-        # Validate required fields
         if "id" not in job_dict or "command" not in job_dict:
             click.echo("Error: Job must have 'id' and 'command' fields", err=True)
             sys.exit(1)
         
-        # Check if job already exists
         existing_job = storage.get_job(job_dict["id"])
         if existing_job:
             click.echo(f"Error: Job with id '{job_dict['id']}' already exists", err=True)
             sys.exit(1)
         
-        # Create job
         job = Job(
             job_id=job_dict["id"],
             command=job_dict["command"],
-            max_retries=job_dict.get("max_retries", app_config.get("max_retries", 3))
+            max_retries=job_dict.get("max_retries", app_config.get("max_retries", 3)),
+            priority=job_dict.get("priority", 5),
+            run_at=job_dict.get("run_at")
         )
         
         storage.save_job(job)
@@ -65,14 +60,12 @@ def worker():
 @worker.command()
 @click.option('--count', default=1, type=int, help='Number of workers to start')
 def start(count):
-    # Start worker processes
     if count < 1:
         click.echo("Error: Worker count must be at least 1", err=True)
         sys.exit(1)
     
     worker_manager.start_workers(count)
     
-    # Keep the process running
     try:
         while worker_manager.running:
             import time
@@ -83,16 +76,13 @@ def start(count):
 
 @worker.command()
 def stop():
-    # Stop all running workers gracefully
     worker_manager.stop_workers()
 
 
 @cli.command()
 def status():
-    # Show summary of all job states and active workers
     all_jobs = storage.get_all_jobs()
     
-    # Count jobs by state
     counts = {
         "pending": 0,
         "processing": 0,
@@ -118,7 +108,6 @@ def status():
 @click.option('--state', type=click.Choice(['pending', 'processing', 'completed', 'failed', 'dead']), 
               help='Filter jobs by state')
 def list(state):
-    # List jobs, optionally filtered by state
     if state:
         state_enum = JobState(state)
         jobs = storage.get_jobs_by_state(state_enum)
@@ -129,7 +118,6 @@ def list(state):
         click.echo("No jobs found")
         return
     
-    # Sort by created_at
     jobs.sort(key=lambda j: j.created_at)
     
     click.echo(f"\n{'ID':<20} {'State':<12} {'Attempts':<10} {'Command':<40}")
@@ -142,13 +130,11 @@ def list(state):
 
 @cli.group()
 def dlq():
-    # Manage Dead Letter Queue
     pass
 
 
 @dlq.command()
 def list():
-    # List all jobs in the Dead Letter Queue
     dead_jobs = storage.get_dead_jobs()
     
     if not dead_jobs:
@@ -170,7 +156,6 @@ def list():
 @dlq.command()
 @click.argument('job_id', type=str)
 def retry(job_id):
-    # Retry a job from the Dead Letter Queue
     job = storage.get_job(job_id)
     
     if not job:
@@ -181,7 +166,6 @@ def retry(job_id):
         click.echo(f"Error: Job '{job_id}' is not in Dead Letter Queue", err=True)
         sys.exit(1)
     
-    # Reset job to pending state
     job.state = JobState.PENDING
     job.attempts = 0
     job.error_message = None
@@ -194,7 +178,6 @@ def retry(job_id):
 
 @cli.group()
 def config():
-    # Manage configuration
     pass
 
 
@@ -202,8 +185,6 @@ def config():
 @click.argument('key', type=str)
 @click.argument('value', type=str)
 def set(key, value):
-    # Set a configuration value
-    # Convert key from kebab-case to snake_case
     key_map = {
         "max-retries": "max_retries",
         "backoff-base": "backoff_base",
@@ -213,7 +194,6 @@ def set(key, value):
     
     internal_key = key_map.get(key, key)
     
-    # Convert value to appropriate type
     try:
         if internal_key in ["max_retries", "job_timeout"]:
             value = int(value)
@@ -233,7 +213,6 @@ def set(key, value):
 
 @config.command()
 def show():
-    # Show current configuration
     all_config = app_config.get_all()
     click.echo("Current Configuration:")
     click.echo("-" * 40)
@@ -250,12 +229,98 @@ def show():
         click.echo(f"{display_key}: {value}")
 
 
+@cli.group()
+def job():
+    """Job management commands"""
+    pass
+
+
+@job.command()
+@click.argument('job_id', type=str)
+@click.option('--stdout', is_flag=True, help='Show stdout only')
+@click.option('--stderr', is_flag=True, help='Show stderr only')
+def output(job_id, stdout, stderr):
+    """View job output (stdout/stderr)"""
+    job = storage.get_job(job_id)
+    if not job:
+        click.echo(f"Error: Job '{job_id}' not found", err=True)
+        sys.exit(1)
+    
+    if stdout and stderr:
+        click.echo("Error: Cannot use --stdout and --stderr together", err=True)
+        sys.exit(1)
+    
+    if stdout:
+        if job.stdout:
+            click.echo(job.stdout)
+        else:
+            click.echo("(no stdout output)")
+    elif stderr:
+        if job.stderr:
+            click.echo(job.stderr)
+        else:
+            click.echo("(no stderr output)")
+    else:
+        if job.stdout:
+            click.echo("=== STDOUT ===")
+            click.echo(job.stdout)
+        if job.stderr:
+            if job.stdout:
+                click.echo("\n=== STDERR ===")
+            click.echo(job.stderr)
+        if not job.stdout and not job.stderr:
+            click.echo("(no output available)")
+
+
+@cli.command()
+def metrics():
+    """Show execution metrics and statistics"""
+    all_jobs = storage.get_all_jobs()
+    
+    completed_jobs = [j for j in all_jobs if j.state == JobState.COMPLETED]
+    failed_jobs = [j for j in all_jobs if j.state == JobState.FAILED]
+    dead_jobs = [j for j in all_jobs if j.state == JobState.DEAD]
+    
+    total_jobs = len(all_jobs)
+    total_completed = len(completed_jobs)
+    total_failed = len(failed_jobs)
+    total_dead = len(dead_jobs)
+    
+    processed_jobs = total_completed + total_failed + total_dead
+    success_rate = (total_completed / processed_jobs * 100) if processed_jobs > 0 else 0
+    
+    jobs_with_time = [j for j in completed_jobs if j.execution_time is not None]
+    avg_execution_time = sum(j.execution_time for j in jobs_with_time) / len(jobs_with_time) if jobs_with_time else 0
+    
+    total_execution_time = sum(j.execution_time for j in jobs_with_time if j.execution_time)
+    
+    fastest_job = min(jobs_with_time, key=lambda j: j.execution_time) if jobs_with_time else None
+    slowest_job = max(jobs_with_time, key=lambda j: j.execution_time) if jobs_with_time else None
+    
+    click.echo("=== Execution Metrics ===")
+    click.echo(f"Total Jobs: {total_jobs}")
+    click.echo(f"Completed: {total_completed}")
+    click.echo(f"Failed: {total_failed}")
+    click.echo(f"Dead (DLQ): {total_dead}")
+    click.echo(f"Success Rate: {success_rate:.2f}%")
+    click.echo("")
+    click.echo("=== Execution Time Statistics ===")
+    if jobs_with_time:
+        click.echo(f"Average Execution Time: {avg_execution_time:.3f}s")
+        click.echo(f"Total Execution Time: {total_execution_time:.3f}s")
+        if fastest_job:
+            click.echo(f"Fastest Job: {fastest_job.id} ({fastest_job.execution_time:.3f}s)")
+        if slowest_job:
+            click.echo(f"Slowest Job: {slowest_job.id} ({slowest_job.execution_time:.3f}s)")
+    else:
+        click.echo("No execution time data available")
+
+
 @cli.command()
 @click.option('--host', default='127.0.0.1', help='Host to bind to')
 @click.option('--port', default=5000, type=int, help='Port to bind to')
 @click.option('--debug', is_flag=True, help='Enable debug mode')
 def web(host, port, debug):
-    # Start the web dashboard
     try:
         from .web import run_web_server
         click.echo(f"Starting web server on http://{host}:{port}")
@@ -267,10 +332,8 @@ def web(host, port, debug):
 
 
 def main():
-    # Entry point for CLI
     cli()
 
 
 if __name__ == "__main__":
     main()
-

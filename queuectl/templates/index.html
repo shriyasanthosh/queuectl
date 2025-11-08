@@ -3,408 +3,972 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QueueCTL - Job Queue Management Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>QueueCTL - Job Queue Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #1a1a1a;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 28px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .stat-value {
+            font-size: 42px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .stat-card.pending .stat-value { color: #f59e0b; }
+        .stat-card.processing .stat-value { color: #3b82f6; }
+        .stat-card.completed .stat-value { color: #10b981; }
+        .stat-card.failed .stat-value { color: #ef4444; }
+        .stat-card.dead .stat-value { color: #8b5cf6; }
+
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 32px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .section-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .section-content {
+            padding: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        th {
+            padding: 18px 24px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 18px 24px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 14px;
+            color: #1a1a1a;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        tbody tr:hover {
+            background: #f3f4f6;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .status-badge.pending { background: #fef3c7; color: #f59e0b; }
+        .status-badge.processing { background: #dbeafe; color: #3b82f6; }
+        .status-badge.completed { background: #d1fae5; color: #10b981; }
+        .status-badge.failed { background: #fee2e2; color: #ef4444; }
+        .status-badge.dead { background: #f3e8ff; color: #8b5cf6; }
+
+        .command-cell {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #4b5563;
+            max-width: 350px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #9ca3af;
+            font-size: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #6b7280;
+            font-size: 16px;
+        }
+
+        .worker-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .worker-status-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .worker-status-indicator.active {
+            background: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #6b7280;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #1a1a1a;
+        }
+
+        .output-pre {
+            background: #1a1a1a;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 24px;
+        }
+
+        .tab {
+            padding: 14px 28px;
+            background: none;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            h1 { font-size: 24px; }
+            .stats-section { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+            .form-row { grid-template-columns: 1fr; }
+            .header-actions { width: 100%; }
+            .header-actions .btn { flex: 1; }
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>QueueCTL</span>
+    <div class="container">
+        <header>
+            <h1>QueueCTL Dashboard</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="openCreateJobModal()">+ Create Job</button>
+                <button class="btn btn-success" onclick="startWorkers()" id="startWorkersBtn">Start Workers</button>
+                <button class="btn btn-danger" onclick="stopWorkers()" id="stopWorkersBtn" style="display:none;">Stop Workers</button>
+                <button class="btn btn-secondary" onclick="loadData()">Refresh</button>
+            </div>
+        </header>
+
+        <div class="stats-section">
+            <div class="stat-card pending">
+                <div class="stat-label">Pending</div>
+                <div class="stat-value" id="pendingCount">0</div>
+            </div>
+            <div class="stat-card processing">
+                <div class="stat-label">Processing</div>
+                <div class="stat-value" id="processingCount">0</div>
+            </div>
+            <div class="stat-card completed">
+                <div class="stat-label">Completed</div>
+                <div class="stat-value" id="completedCount">0</div>
+            </div>
+            <div class="stat-card failed">
+                <div class="stat-label">Failed</div>
+                <div class="stat-value" id="failedCount">0</div>
+            </div>
+            <div class="stat-card dead">
+                <div class="stat-label">Dead (DLQ)</div>
+                <div class="stat-value" id="deadCount">0</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Worker Status</h2>
+            </div>
+            <div class="section-content">
+                <div class="worker-status">
+                    <div class="worker-status-indicator" id="workerIndicator"></div>
+                    <span id="workerStatusText">Workers not running</span>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Number of Workers</label>
+                        <input type="number" id="workerCount" value="2" min="1" max="10">
+                    </div>
                 </div>
             </div>
-            <nav class="sidebar-nav">
-                <a href="#dashboard" class="nav-item active" data-section="dashboard">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                    <span>Dashboard</span>
-                </a>
-                <a href="#jobs" class="nav-item" data-section="jobs">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    <span>Jobs</span>
-                </a>
-                <a href="#workers" class="nav-item" data-section="workers">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </svg>
-                    <span>Workers</span>
-                </a>
-                <a href="#dlq" class="nav-item" data-section="dlq">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                    <span>Dead Letter Queue</span>
-                </a>
-                <a href="#config" class="nav-item" data-section="config">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
-                    </svg>
-                    <span>Configuration</span>
-                </a>
-            </nav>
-        </aside>
+        </div>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Top Bar -->
-            <header class="top-bar">
-                <div class="top-bar-left">
-                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+        <div class="section">
+            <div class="section-header">
+                <h2>Jobs</h2>
+            </div>
+            <div class="section-content">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('all')">All Jobs</button>
+                    <button class="tab" onclick="switchTab('dlq')">Dead Letter Queue</button>
+                    <button class="tab" onclick="switchTab('metrics')">Metrics</button>
                 </div>
-                <div class="top-bar-right">
-                    <div class="refresh-controls">
-                        <button id="refreshBtn" class="btn-icon" title="Refresh">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="23 4 23 10 17 10"></polyline>
-                                <polyline points="1 20 1 14 7 14"></polyline>
-                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                            </svg>
-                        </button>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="autoRefresh" checked>
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">Auto-refresh</span>
-                        </label>
+                <div id="tabAll" class="tab-content active">
+                    <div id="tableContainer">
+                        <div class="loading">Loading jobs...</div>
                     </div>
                 </div>
-            </header>
-
-            <!-- Dashboard Section -->
-            <section id="dashboard-section" class="content-section active">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon total">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                            </svg>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Total Jobs</div>
-                            <div class="stat-value" id="totalJobs">0</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon pending">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 6 12 12 16 14"></polyline>
-                            </svg>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Pending</div>
-                            <div class="stat-value" id="pendingJobs">0</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon processing">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
-                            </svg>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Processing</div>
-                            <div class="stat-value" id="processingJobs">0</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon completed">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Completed</div>
-                            <div class="stat-value" id="completedJobs">0</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon failed">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="8" x2="12" y2="12"></line>
-                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                            </svg>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Failed</div>
-                            <div class="stat-value" id="failedJobs">0</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon dead">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                                <line x1="12" y1="9" x2="12" y2="13"></line>
-                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                            </svg>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Dead (DLQ)</div>
-                            <div class="stat-value" id="deadJobs">0</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon workers">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="9" cy="7" r="4"></circle>
-                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                            </svg>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Active Workers</div>
-                            <div class="stat-value" id="activeWorkers">0</div>
-                        </div>
+                <div id="tabDlq" class="tab-content">
+                    <div id="dlqContainer">
+                        <div class="loading">Loading DLQ jobs...</div>
                     </div>
                 </div>
-
-                <div class="quick-actions">
-                    <h2 class="section-title">Quick Actions</h2>
-                    <div class="action-buttons">
-                        <button class="action-btn" onclick="showSection('jobs')">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            <span>Enqueue Job</span>
-                        </button>
-                        <button class="action-btn" onclick="showSection('workers')">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                                <polyline points="17 6 23 6 23 12"></polyline>
-                            </svg>
-                            <span>Manage Workers</span>
-                        </button>
-                        <button class="action-btn" onclick="showSection('dlq')">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></svg>
-                            <span>View DLQ</span>
-                        </button>
+                <div id="tabMetrics" class="tab-content">
+                    <div id="metricsContainer">
+                        <div class="loading">Loading metrics...</div>
                     </div>
                 </div>
-            </section>
-
-            <!-- Jobs Section -->
-            <section id="jobs-section" class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">Job Management</h2>
-                    <button class="btn-primary" onclick="openJobModal()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                        Enqueue Job
-                    </button>
-                </div>
-                <div class="filter-bar">
-                    <select id="stateFilter" class="filter-select">
-                        <option value="">All States</option>
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="completed">Completed</option>
-                        <option value="failed">Failed</option>
-                        <option value="dead">Dead (DLQ)</option>
-                    </select>
-                    <div class="search-box">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="M21 21l-4.35-4.35"></path>
-                        </svg>
-                        <input type="text" id="jobSearch" placeholder="Search jobs...">
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Job ID</th>
-                                <th>State</th>
-                                <th>Attempts</th>
-                                <th>Command</th>
-                                <th>Created</th>
-                                <th>Updated</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="jobsTableBody">
-                            <tr>
-                                <td colspan="7" class="empty-state">Loading jobs...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Workers Section -->
-            <section id="workers-section" class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">Worker Management</h2>
-                </div>
-                <div class="worker-panel">
-                    <div class="worker-status-card">
-                        <div class="status-indicator">
-                            <div class="status-dot" id="workerStatusDot"></div>
-                            <span id="workerStatus">Stopped</span>
-                        </div>
-                        <div class="worker-count">
-                            <span class="label">Active Workers:</span>
-                            <span class="value" id="workerCountDisplay">0</span>
-                        </div>
-                    </div>
-                    <div class="worker-controls-panel">
-                        <div class="form-group">
-                            <label for="workerCount">Number of Workers</label>
-                            <input type="number" id="workerCount" value="1" min="1" max="10" class="form-input">
-                        </div>
-                        <div class="button-group">
-                            <button id="startWorkersBtn" class="btn-success">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                                </svg>
-                                Start Workers
-                            </button>
-                            <button id="stopWorkersBtn" class="btn-danger" disabled>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="6" y="6" width="12" height="12"></rect>
-                                </svg>
-                                Stop Workers
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- DLQ Section -->
-            <section id="dlq-section" class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">Dead Letter Queue</h2>
-                </div>
-                <div id="dlqContainer" class="dlq-grid">
-                    <div class="empty-state">Loading DLQ jobs...</div>
-                </div>
-            </section>
-
-            <!-- Configuration Section -->
-            <section id="config-section" class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">Configuration</h2>
-                </div>
-                <div class="config-panel">
-                    <table class="config-table">
-                        <thead>
-                            <tr>
-                                <th>Setting</th>
-                                <th>Value</th>
-                                <th>Description</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="configTableBody">
-                            <tr>
-                                <td colspan="4" class="empty-state">Loading configuration...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </main>
+            </div>
+        </div>
     </div>
 
-    <!-- Job Enqueue Modal -->
-    <div id="jobModal" class="modal">
+    <div class="modal" id="createJobModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Enqueue New Job</h2>
-                <button class="modal-close" onclick="closeJobModal()">&times;</button>
+                <h3>Create New Job</h3>
+                <button class="close-btn" onclick="closeCreateJobModal()">&times;</button>
             </div>
-            <form id="enqueueForm" class="modal-body">
+            <form onsubmit="createJob(event)">
                 <div class="form-group">
-                    <label for="jobId">Job ID *</label>
-                    <input type="text" id="jobId" name="jobId" required placeholder="e.g., job-001" class="form-input">
+                    <label>Job ID *</label>
+                    <input type="text" id="jobId" required placeholder="e.g., job-001">
                 </div>
                 <div class="form-group">
-                    <label for="jobCommand">Command *</label>
-                    <textarea id="jobCommand" name="jobCommand" required placeholder="e.g., echo Hello World" class="form-input" rows="3"></textarea>
+                    <label>Command *</label>
+                    <textarea id="jobCommand" required placeholder="e.g., echo Hello World"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Priority (1-10, higher is better)</label>
+                        <input type="number" id="jobPriority" value="5" min="1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Retries</label>
+                        <input type="number" id="jobMaxRetries" value="3" min="0">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label for="maxRetries">Max Retries</label>
-                    <input type="number" id="maxRetries" name="maxRetries" value="3" min="0" class="form-input">
+                    <label>Run At (ISO format, optional)</label>
+                    <input type="text" id="jobRunAt" placeholder="2024-01-01T12:00:00Z">
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeJobModal()">Cancel</button>
-                    <button type="submit" class="btn-primary">Enqueue Job</button>
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateJobModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Job</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Job Details Modal -->
-    <div id="jobDetailsModal" class="modal">
+    <div class="modal" id="jobDetailsModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Job Details</h2>
-                <button class="modal-close" onclick="closeJobDetailsModal()">&times;</button>
+                <h3>Job Details</h3>
+                <button class="close-btn" onclick="closeJobDetailsModal()">&times;</button>
             </div>
-            <div id="jobDetails" class="modal-body job-details">
-                <!-- Job details will be populated here -->
-            </div>
+            <div id="jobDetailsContent"></div>
         </div>
     </div>
 
-    <!-- Config Edit Modal -->
-    <div id="configModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Edit Configuration</h2>
-                <button class="modal-close" onclick="closeConfigModal()">&times;</button>
-            </div>
-            <form id="configEditForm" class="modal-body">
-                <div class="form-group">
-                    <label id="configKeyLabel"></label>
-                    <input type="text" id="configValueInput" required class="form-input">
-                    <small id="configDescription"></small>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeConfigModal()">Cancel</button>
-                    <button type="submit" class="btn-primary">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <script>
+        const API_BASE = '';
+        let currentTab = 'all';
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if (tab === 'all') {
+                document.querySelector('.tab:first-child').classList.add('active');
+                document.getElementById('tabAll').classList.add('active');
+                loadJobs();
+            } else if (tab === 'dlq') {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('tabDlq').classList.add('active');
+                loadDLQ();
+            } else if (tab === 'metrics') {
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                document.getElementById('tabMetrics').classList.add('active');
+                loadMetrics();
+            }
+        }
+
+        async function loadWorkerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/workers/status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const indicator = document.getElementById('workerIndicator');
+                    const statusText = document.getElementById('workerStatusText');
+                    const startBtn = document.getElementById('startWorkersBtn');
+                    const stopBtn = document.getElementById('stopWorkersBtn');
+                    
+                    if (data.running) {
+                        indicator.classList.add('active');
+                        statusText.textContent = `${data.active_count} worker(s) running`;
+                        startBtn.style.display = 'none';
+                        stopBtn.style.display = 'inline-flex';
+                    } else {
+                        indicator.classList.remove('active');
+                        statusText.textContent = 'Workers not running';
+                        startBtn.style.display = 'inline-flex';
+                        stopBtn.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading worker status:', error);
+            }
+        }
+
+        async function startWorkers() {
+            const count = parseInt(document.getElementById('workerCount').value) || 2;
+            try {
+                const response = await fetch(`${API_BASE}/api/workers/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(`Started ${count} worker(s)`);
+                    loadWorkerStatus();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        async function stopWorkers() {
+            try {
+                const response = await fetch(`${API_BASE}/api/workers/stop`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Workers stopped');
+                    loadWorkerStatus();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        function updateStats(jobs) {
+            const stats = { pending: 0, processing: 0, completed: 0, failed: 0, dead: 0 };
+            jobs.forEach(job => {
+                if (stats.hasOwnProperty(job.state)) {
+                    stats[job.state]++;
+                }
+            });
+            document.getElementById('pendingCount').textContent = stats.pending;
+            document.getElementById('processingCount').textContent = stats.processing;
+            document.getElementById('completedCount').textContent = stats.completed;
+            document.getElementById('failedCount').textContent = stats.failed;
+            document.getElementById('deadCount').textContent = stats.dead;
+        }
+
+        function renderTable(jobs, containerId = 'tableContainer') {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<div class="empty-state">No jobs found</div>';
+                return;
+            }
+
+            let html = '<table><thead><tr>';
+            html += '<th>Job ID</th><th>Command</th><th>Status</th><th>Priority</th><th>Retries</th><th>Created At</th><th>Actions</th>';
+            html += '</tr></thead><tbody>';
+
+            jobs.forEach(job => {
+                html += '<tr>';
+                html += `<td><strong>${escapeHtml(job.id)}</strong></td>`;
+                html += `<td class="command-cell" title="${escapeHtml(job.command)}">${escapeHtml(job.command)}</td>`;
+                html += `<td><span class="status-badge ${job.state}">${escapeHtml(job.state)}</span></td>`;
+                html += `<td>${job.priority || 5}</td>`;
+                html += `<td>${job.attempts} / ${job.max_retries}</td>`;
+                html += `<td>${formatDate(job.created_at)}</td>`;
+                html += '<td>';
+                html += `<button class="action-btn btn-primary" onclick="viewJobDetails('${escapeHtml(job.id).replace(/'/g, "\\'")}')">View</button>`;
+                if (job.state === 'dead') {
+                    html += `<button class="action-btn btn-success" onclick="retryJob('${escapeHtml(job.id).replace(/'/g, "\\'")}')">Retry</button>`;
+                }
+                html += `<button class="action-btn btn-danger" onclick="deleteJob('${escapeHtml(job.id).replace(/'/g, "\\'")}')">Delete</button>`;
+                html += '</td></tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        async function loadJobs() {
+            try {
+                const response = await fetch(`${API_BASE}/api/jobs`);
+                if (!response.ok) throw new Error('Failed to load jobs');
+                const jobs = await response.json();
+                updateStats(jobs);
+                renderTable(jobs);
+            } catch (error) {
+                console.error('Error loading jobs:', error);
+                document.getElementById('tableContainer').innerHTML = 
+                    '<div class="empty-state">Error loading jobs. Please try again.</div>';
+            }
+        }
+
+        async function loadDLQ() {
+            try {
+                const response = await fetch(`${API_BASE}/api/dlq`);
+                if (!response.ok) throw new Error('Failed to load DLQ');
+                const jobs = await response.json();
+                const container = document.getElementById('dlqContainer');
+                if (jobs.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No jobs in Dead Letter Queue</div>';
+                    return;
+                }
+                renderTable(jobs, 'dlqContainer');
+            } catch (error) {
+                console.error('Error loading DLQ:', error);
+                const container = document.getElementById('dlqContainer');
+                if (container) {
+                    container.innerHTML = '<div class="empty-state">Error loading DLQ. Please try again.</div>';
+                }
+            }
+        }
+
+        async function loadMetrics() {
+            try {
+                const response = await fetch(`${API_BASE}/api/metrics`);
+                if (!response.ok) throw new Error('Failed to load metrics');
+                const metrics = await response.json();
+                const container = document.getElementById('metricsContainer');
+                
+                let html = '<div class="metrics-grid">';
+                html += `<div class="metric-card"><div class="metric-label">Total Jobs</div><div class="metric-value">${metrics.total_jobs}</div></div>`;
+                html += `<div class="metric-card"><div class="metric-label">Completed</div><div class="metric-value">${metrics.completed}</div></div>`;
+                html += `<div class="metric-card"><div class="metric-label">Failed</div><div class="metric-value">${metrics.failed}</div></div>`;
+                html += `<div class="metric-card"><div class="metric-label">Dead (DLQ)</div><div class="metric-value">${metrics.dead}</div></div>`;
+                html += `<div class="metric-card"><div class="metric-label">Success Rate</div><div class="metric-value">${metrics.success_rate}%</div></div>`;
+                html += `<div class="metric-card"><div class="metric-label">Avg Execution Time</div><div class="metric-value">${metrics.execution_time.average}s</div></div>`;
+                html += `<div class="metric-card"><div class="metric-label">Total Execution Time</div><div class="metric-value">${metrics.execution_time.total}s</div></div>`;
+                if (metrics.execution_time.fastest.job_id) {
+                    html += `<div class="metric-card"><div class="metric-label">Fastest Job</div><div class="metric-value">${metrics.execution_time.fastest.job_id}<br><small style="font-size: 14px; color: #6b7280;">${metrics.execution_time.fastest.time}s</small></div></div>`;
+                }
+                if (metrics.execution_time.slowest.job_id) {
+                    html += `<div class="metric-card"><div class="metric-label">Slowest Job</div><div class="metric-value">${metrics.execution_time.slowest.job_id}<br><small style="font-size: 14px; color: #6b7280;">${metrics.execution_time.slowest.time}s</small></div></div>`;
+                }
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                const container = document.getElementById('metricsContainer');
+                if (container) {
+                    container.innerHTML = '<div class="empty-state">Error loading metrics. Please try again.</div>';
+                }
+            }
+        }
+
+        function openCreateJobModal() {
+            document.getElementById('createJobModal').classList.add('active');
+        }
+
+        function closeCreateJobModal() {
+            document.getElementById('createJobModal').classList.remove('active');
+            document.getElementById('jobId').value = '';
+            document.getElementById('jobCommand').value = '';
+            document.getElementById('jobPriority').value = '5';
+            document.getElementById('jobMaxRetries').value = '3';
+            document.getElementById('jobRunAt').value = '';
+        }
+
+        async function createJob(event) {
+            event.preventDefault();
+            const jobData = {
+                id: document.getElementById('jobId').value,
+                command: document.getElementById('jobCommand').value,
+                priority: parseInt(document.getElementById('jobPriority').value) || 5,
+                max_retries: parseInt(document.getElementById('jobMaxRetries').value) || 3
+            };
+            const runAt = document.getElementById('jobRunAt').value.trim();
+            if (runAt) jobData.run_at = runAt;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/jobs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jobData)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Job created successfully!');
+                    closeCreateJobModal();
+                    loadData();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        async function viewJobDetails(jobId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/jobs/${jobId}`);
+                if (!response.ok) throw new Error('Job not found');
+                const job = await response.json();
+                
+                const outputResponse = await fetch(`${API_BASE}/api/jobs/${jobId}/output`);
+                const output = outputResponse.ok ? await outputResponse.json() : { stdout: '', stderr: '' };
+                
+                let html = `<div class="form-group"><strong>Job ID:</strong> ${escapeHtml(job.id)}</div>`;
+                html += `<div class="form-group"><strong>Command:</strong><br><code>${escapeHtml(job.command)}</code></div>`;
+                html += `<div class="form-group"><strong>Status:</strong> <span class="status-badge ${job.state}">${escapeHtml(job.state)}</span></div>`;
+                html += `<div class="form-row">`;
+                html += `<div class="form-group"><strong>Priority:</strong> ${job.priority || 5}</div>`;
+                html += `<div class="form-group"><strong>Attempts:</strong> ${job.attempts} / ${job.max_retries}</div>`;
+                html += `</div>`;
+                html += `<div class="form-group"><strong>Created At:</strong> ${formatDate(job.created_at)}</div>`;
+                if (job.error_message) {
+                    html += `<div class="form-group"><strong>Error:</strong><br><code style="color: #ef4444;">${escapeHtml(job.error_message)}</code></div>`;
+                }
+                if (output.stdout || output.stderr) {
+                    html += `<div class="form-group"><strong>Output:</strong></div>`;
+                    if (output.stdout) {
+                        html += `<div class="form-group"><strong>STDOUT:</strong><pre class="output-pre">${escapeHtml(output.stdout)}</pre></div>`;
+                    }
+                    if (output.stderr) {
+                        html += `<div class="form-group"><strong>STDERR:</strong><pre class="output-pre" style="color: #ef4444;">${escapeHtml(output.stderr)}</pre></div>`;
+                    }
+                }
+                if (job.execution_time !== null && job.execution_time !== undefined) {
+                    html += `<div class="form-group"><strong>Execution Time:</strong> ${Number(job.execution_time).toFixed(3)}s</div>`;
+                }
+                
+                document.getElementById('jobDetailsContent').innerHTML = html;
+                document.getElementById('jobDetailsModal').classList.add('active');
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        function closeJobDetailsModal() {
+            document.getElementById('jobDetailsModal').classList.remove('active');
+        }
+
+        async function retryJob(jobId) {
+            if (!confirm(`Retry job "${jobId}"?`)) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/jobs/${jobId}/retry`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Job moved back to queue for retry');
+                    loadData();
+                    if (currentTab === 'dlq') loadDLQ();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        async function deleteJob(jobId) {
+            if (!confirm(`Delete job "${jobId}"?`)) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/jobs/${jobId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Job deleted');
+                    loadData();
+                    if (currentTab === 'dlq') loadDLQ();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        function loadData() {
+            loadWorkerStatus();
+            if (currentTab === 'all') loadJobs();
+            else if (currentTab === 'dlq') loadDLQ();
+            else if (currentTab === 'metrics') loadMetrics();
+        }
+
+        loadData();
+        setInterval(loadData, 5000);
+    </script>
 </body>
 </html>
